@@ -12,7 +12,8 @@
   "dependencies": {
     "apisauce": "^2.0.1",
     "react": "16.13.1",
-    "react-native": "0.63.4"
+    "react-native": "0.63.4",
+    "react-native-localization": "^2.1.6"
   },
   "devDependencies": {
     "@babel/core": "^7.8.4",

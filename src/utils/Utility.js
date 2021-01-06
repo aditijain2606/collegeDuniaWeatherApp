@@ -1,12 +1,15 @@
+import strings from "./strings";
 
 export function getWeekDay(timestamp) {
     var weekdays = new Array(
-        "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+        strings.sunday, strings.monday, strings.tuesday, strings.wednesday, strings.thursday, strings.friday, strings.saturday
     );
-    
+
     var date = new Date(timestamp * 1000)
-    console.log("Date: " + date)
     var day = date.getDay()
-    console.log("Weekday: " + weekdays[day])
     return weekdays[day]
+}
+
+export function conditionalRender(condition, renderContent) {
+    return condition ? renderContent : null
 }
