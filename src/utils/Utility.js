@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import strings from "./strings";
 
 export function getWeekDay(timestamp) {
@@ -12,4 +13,12 @@ export function getWeekDay(timestamp) {
 
 export function conditionalRender(condition, renderContent) {
     return condition ? renderContent : null
+}
+
+export function isPlatformAndroid() {
+    return Platform.OS == "android"
+}
+
+export function isPlatformIOS() {
+    return Platform.OS == "ios"
 }

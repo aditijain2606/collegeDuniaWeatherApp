@@ -1,29 +1,60 @@
+import GetLocation from 'react-native-get-location'
 import React, { useEffect, useState } from 'react'
-import { View } from 'react-native'
+import { PermissionsAndroid, View } from 'react-native'
+import { connect, useDispatch } from 'react-redux'
+import { bindActionCreators } from 'redux'
 import network from '../network/Network'
-import { conditionalRender, getWeekDay } from '../utils/Utility'
+import { initiateSearch, updateLocation, errorOccured, completeSearch } from '../Redux/LocationActions'
+import { conditionalRender, getWeekDay, isPlatformAndroid } from '../utils/Utility'
 import Error from './Error'
 import Forecast from './Forecast'
+import Loader from './Loader'
 
 const Main = (props) => {
 
-    const [location, setLocation] = useState({ lat: null, lon: null })
+    const dispatch = useDispatch()
     const [currentTemp, setCurrentTemp] = useState(null)
     const [forecast, setForecast] = useState([])
-    const [error, setError] = useState(false)
 
     useEffect(() => {
-        setLocation({
-            lat: 28.488772095224803,
-            lon: 77.0959881108008
-        })
-        getWeatherForecast()
+        getCurrentLocation()
     }, [])
 
-    function getWeatherForecast() {
-        setError(false)
-        network.getWeatherForecast(location.lat, location.lon).then((response) => {
-           // console.log("Response: " + JSON.stringify(response))
+    async function requestLocationPermission() {
+        try{
+            const permission = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+            if(permission) {
+                return true
+            }
+        } catch(error) {
+            console.log("Error in permission: " + error)
+        }
+
+        return false
+    }
+    async function getCurrentLocation() {
+        if(isPlatformAndroid()) {
+            if(! await requestLocationPermission()){
+                dispatch(errorOccured())
+                return;
+            }
+        }
+        dispatch(initiateSearch())
+        GetLocation.getCurrentPosition().then((position) => {
+            
+            dispatch(updateLocation(position.latitude, position.longitude))
+            getWeatherForecast(position.latitude, position.longitude)
+        }).catch((error) => {
+            dispatch(errorOccured())
+            
+        })
+    }
+
+    function getWeatherForecast(lat, lon) {
+        
+        network.getWeatherForecast(lat, lon).then((response) => {
+            console.log("Response: " + JSON.stringify(response))
+            dispatch(completeSearch())
             if(response.current && response.current.temp) {
                 setCurrentTemp(response.current.temp)
             }
@@ -34,15 +65,16 @@ const Main = (props) => {
             
         }).catch((error) => {
             console.log("Error: " + error)
-            setError(true)
+            dispatch(errorOccured())
         })
     }
 
     return (
         <>
             <View style={{ flex: 1}}>
-                {conditionalRender(!error, <Forecast currentTemp={currentTemp} location={location} forecast={forecast} />)}
-                {conditionalRender(error, <Error retry={getWeatherForecast}/>)}
+                {conditionalRender(!props.isError && !props.isLoading, <Forecast currentTemp={currentTemp} location={{ lat: props.latitude, lon: props.longitude }} forecast={forecast} />)}
+                {conditionalRender(props.isError && !props.isLoading, <Error retry={getCurrentLocation}/>)}
+                {conditionalRender(props.isLoading, <Loader />)}
             </View>
         </>
     )
@@ -62,4 +94,19 @@ function get5DayForecast(dailyForecast) {
     return allForecasts
 }
 
-export default Main;
+const mapDispatchToProps = (dispatch) => (
+    bindActionCreators({
+        initiateSearch,
+        updateLocation,
+        errorOccured,
+        completeSearch,
+    }, dispatch)
+)
+
+const mapStateToProps = (state) => {
+    const {isError, isLoading, latitude, longitude} = state.locationReducer
+    console.log("State: " + JSON.stringify(state))
+    return {isError, isLoading, latitude, longitude};
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(Main);
